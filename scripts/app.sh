@@ -4,7 +4,7 @@
 param1=$1
 param2=$2
 
-## Load Data to Cluster
+## Load Data to Cluster | ./app.sh -ld
 if [[ $param1 == "-ld" ]]; then
 
   #  Los Angeles Crime Data - Primary
@@ -34,12 +34,54 @@ if [[ $param1 == "-ld" ]]; then
 
 fi
 
-## Combine Primary Data to Cluster
+## Combine Primary Data to Cluster | ./app.sh -cd
 if [[ $param1 == "-cd" ]]; then
   $SPARK_HOME/bin/spark-submit \
   /home/user/project/src/data_proc/combine_data.py
+
+  echo "Deleting Previous CSVs"
+  hdfs dfs -rm /user/data/primary/crime_data_2019.csv
+  hdfs dfs -rm /user/data/primary/crime_data_2020_present.csv
 fi
 
-# $SPARK_HOME/bin/spark-submit \
-# /home/user/project/src/data_proc/load_data.py
+## Count & Types | ./app.sh -ct
+if [[ $param1 == "-ct" ]]; then
+  $SPARK_HOME/bin/spark-submit \
+    /home/user/project/src/data_proc/count_types.py
+fi
 
+
+## Query 1 - Dataframe API - 4 Executors | ./app.sh -q1 -df
+if [[ $param1 == "-q1" && $param2 == "-df" ]]; then
+  $SPARK_HOME/bin/spark-submit \
+    --num-executors 4 \
+    /home/user/project/src/query1/query1_df.py
+fi
+
+## Query 1 - SQL API - 4 Executros | ./app.sh -q1 -sql
+if [[ $param1 == "-q1" && $param2 == "-sql" ]]; then
+  $SPARK_HOME/bin/spark-submit \
+    --num-executors 4 \
+    /home/user/project/src/query1/query1_sql.py
+fi
+
+## Query 2 - Dataframe API - 4 Executors | ./app.sh -q2 -df
+if [[ $param1 == "-q2" && $param2 == "-df" ]]; then
+  $SPARK_HOME/bin/spark-submit \
+    --num-executors 4 \
+    /home/user/project/src/query2/query2_df.py
+fi
+
+## Query 2 - RDD API - 4 Executors | ./app.sh -q2 -rdd
+if [[ $param1 == "-q2" && $param2 == "-rdd" ]]; then
+  $SPARK_HOME/bin/spark-submit \
+    --num-executors 4 \
+    /home/user/project/src/query2/query2_rdd.py
+fi
+
+## Query 3 - Dataframe API - {num} Executors | ./app.sh -q3 {num} 
+if [[ $param1 == "-q3" ]]; then
+  $SPARK_HOME/bin/spark-submit \
+    --num-executors $param2 \
+    /home/user/project/src/query3/query3_df.py
+fi

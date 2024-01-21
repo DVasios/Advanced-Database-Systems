@@ -1,5 +1,24 @@
 # ---- Query 2 | Dataframe API ----
 
+# Pyspark Libraries
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import when, count, col
+import time
+
+# Spark Session | Queries
+sc = SparkSession \
+    .builder \
+    .appName("Query 2 - Dataframe API") \
+    .getOrCreate() 
+
+# Crime Data DF
+crime_data_df = sc.read.format('csv') \
+    .options(header='true', inferSchema=True) \
+    .load("hdfs://okeanos-master:54310/user/data/primary/crime_data")
+
+## --- Start Time ----
+start_time = time.time()
+
 query_2 = crime_data_df \
     .filter(crime_data_df['Premis Desc'] == 'STREET') \
     .withColumn( 
@@ -16,3 +35,14 @@ query_2 = crime_data_df \
 
 # Print Output
 query_2.show()
+
+## --- Finish Time ----
+finish_time = time.time()
+execution_time = round(finish_time - start_time, 2)
+print(f"Execution Time: {execution_time} seconds")
+
+# Export the results
+query_2.toPandas().to_csv('/home/user/project/results/q2_df.csv', index=False)
+
+# Stop Spark Session
+sc.stop()

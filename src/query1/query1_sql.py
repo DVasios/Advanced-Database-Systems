@@ -1,73 +1,30 @@
+# ---- Query 1 | SQL API ----
+
 # Pyspark Libraries
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructField, StructType, StringType, IntegerType
-from pyspark.sql.functions import col, count, when, to_timestamp, udf,  radians, sin, cos, sqrt, atan2, round
-from pyspark.sql.functions import year, month, count, dense_rank, avg
-from pyspark.sql.window import Window
-from pyspark.conf import SparkConf
+from pyspark.sql.functions import to_timestamp
 
-# Other Libraries
-import os
-import subprocess as sp
+import time
 
 # Spark Session | Queries
 sc = SparkSession \
     .builder \
-    .appName("Queries") \
-    .config(conf=conf) \
+    .appName("Query 1 - SQL API") \
     .getOrCreate() 
 
-# Crime Data Schema
-crime_data_schema = StructType([
-    StructField("DR_NO", StringType()),
-    StructField("Date Rptd", StringType()),
-    StructField("DATE OCC", StringType()),
-    StructField("TIME OCC", StringType()),
-    StructField("AREA", StringType()),
-    StructField("AREA NAME", StringType()),
-    StructField("Rpt Dist No", StringType()),
-    StructField("Part 1-2", StringType()),
-    StructField("Crm Cd", StringType()),
-    StructField("Crm Cd Desc", StringType()),
-    StructField("Mocodes", StringType()),
-    StructField("Vict Age", StringType()),
-    StructField("Vict Sex", StringType()),
-    StructField("Vict Descent", StringType()),
-    StructField("Premis Cd", StringType()),
-    StructField("Premis Desc", StringType()),
-    StructField("Weapon Used Cd", StringType()),
-    StructField("Weapon Desc", StringType()),
-    StructField("Status", StringType()),
-    StructField("Status Desc", StringType()),
-    StructField("Crm Cd 1", StringType()),
-    StructField("Crm Cd 2", StringType()),
-    StructField("Crm Cd 3", StringType()),
-    StructField("Crm Cd 4", StringType()),
-    StructField("LOCATION", StringType()),
-    StructField("Cross Street", StringType()),
-    StructField("LAT", StringType()),
-    StructField("LON", StringType()),
-])
-
+# Crime Data DF
 crime_data_df = sc.read.format('csv') \
-    .options(header='true') \
-    .schema(crime_data_schema) \
-    .load("hdfs://okeanos-master:54310/user/data/primary/crime_data.csv")
+    .options(header='true', inferSchema=True) \
+    .load("hdfs://okeanos-master:54310/user/data/primary/crime_data")
 
-# Change Columns types
-crime_data_df = crime_data_df.withColumn('Date Rptd', to_timestamp('Date Rptd', 'MM/dd/yyyy hh:mm:ss a')) \
-                             .withColumn('DATE OCC', to_timestamp('DATE OCC', 'MM/dd/yyyy hh:mm:ss a')) \
-                             .withColumn('TIME OCC', col('TIME OCC').cast('int')) \
-                             .withColumn('Vict Age', col('Vict Age').cast('int')) \
-                             .withColumn('LAT',col('LAT').cast('double')) \
-                             .withColumn('LON', col('LON').cast('double'))
+## --- Start Time ----
+start_time = time.time()
 
-# ---- Query 1 | SQL API ----
 query_1_sql = """ with MonthlyCrimeCounts AS ( 
   SELECT  
     EXTRACT(YEAR FROM `Date Rptd`) AS Year, 
     EXTRACT(MONTH FROM `Date Rptd`) AS Month, 
-    COUNT(*) AS crime_count,  
+    COUNT(*) AS crimetotal,  
     ROW_NUMBER() OVER (PARTITION BY EXTRACT(YEAR FROM `Date Rptd`) ORDER BY COUNT(*) DESC) AS rn 
   FROM 
     crime_data
@@ -79,16 +36,31 @@ query_1_sql = """ with MonthlyCrimeCounts AS (
 SELECT 
   Year, 
   Month, 
-  crime_count, 
-  rn AS month_rank  
+  crimetotal, 
+  rn as rank
 FROM 
   MonthlyCrimeCounts 
 WHERE 
   rn <= 3 
 ORDER BY 
   Year ASC, 
-  crime_count DESC; """
+  crimetotal DESC; """
 
+# Change Columns types
+crime_data_df = crime_data_df.withColumn('Date Rptd', to_timestamp('Date Rptd', 'MM/dd/yyyy hh:mm:ss a'))
+
+# Create Temp View
 crime_data_df.createOrReplaceTempView("crime_data")
 crime_data_query_1 = sc.sql(query_1_sql)
-crime_data_query_1.show()
+crime_data_query_1.show(100)
+
+## --- Finish Time ----
+finish_time = time.time()
+execution_time = round(finish_time - start_time, 2)
+print(f"Execution Time: {execution_time} seconds")
+
+# Export the results
+crime_data_query_1.toPandas().to_csv('/home/user/project/results/q1_sql.csv', index=False)
+
+# Stop Spark  Session
+sc.stop()

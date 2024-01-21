@@ -1,67 +1,36 @@
+# ---- QUERY 1 | DATAFRAME API ----
+
 # Pyspark Libraries
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructField, StructType, StringType, IntegerType
-from pyspark.sql.functions import col, count, when, to_timestamp, udf,  radians, sin, cos, sqrt, atan2, round
-from pyspark.sql.functions import year, month, count, dense_rank, avg
+from pyspark.sql.functions import year, month, count, dense_rank, to_timestamp
 from pyspark.sql.window import Window
-from pyspark.conf import SparkConf
 
-# Other Libraries
-import os
-import subprocess as sp
+import time
 
 # Spark Session | Queries
 sc = SparkSession \
     .builder \
-    .appName("Queries") \
-    .config(conf=conf) \
+    .appName("Query 1 - Dataframe API") \
     .getOrCreate() 
 
-# Crime Data Schema
-# crime_data_schema = StructType([
-#     StructField("DR_NO", StringType()),
-#     StructField("Date Rptd", StringType()),
-#     StructField("DATE OCC", StringType()),
-#     StructField("TIME OCC", StringType()),
-#     StructField("AREA", StringType()),
-#     StructField("AREA NAME", StringType()),
-#     StructField("Rpt Dist No", StringType()),
-#     StructField("Part 1-2", StringType()),
-#     StructField("Crm Cd", StringType()),
-#     StructField("Crm Cd Desc", StringType()),
-#     StructField("Mocodes", StringType()),
-#     StructField("Vict Age", StringType()),
-#     StructField("Vict Sex", StringType()),
-#     StructField("Vict Descent", StringType()),
-#     StructField("Premis Cd", StringType()),
-#     StructField("Premis Desc", StringType()),
-#     StructField("Weapon Used Cd", StringType()),
-#     StructField("Weapon Desc", StringType()),
-#     StructField("Status", StringType()),
-#     StructField("Status Desc", StringType()),
-#     StructField("Crm Cd 1", StringType()),
-#     StructField("Crm Cd 2", StringType()),
-#     StructField("Crm Cd 3", StringType()),
-#     StructField("Crm Cd 4", StringType()),
-#     StructField("LOCATION", StringType()),
-#     StructField("Cross Street", StringType()),
-#     StructField("LAT", StringType()),
-#     StructField("LON", StringType()),
-# ])
+# Crime Data DF
+crime_data_df = sc.read.format('csv') \
+    .options(header='true', inferSchema=True) \
+    .load("hdfs://okeanos-master:54310/user/data/primary/crime_data")
 
+## --- Start Time ----
+start_time = time.time()
 
-
-# ---- QUERY 1 | DATAFRAME API ----
-
-# Keep specific columns from the dataframe
-crime_data_date = crime_data_df.select('Date Rptd')
+# Change Columns types
+crime_data_df = crime_data_df \
+    .withColumn('Date Rptd', to_timestamp('Date Rptd', 'MM/dd/yyyy hh:mm:ss a')) \
+    .select('Date Rptd')
 
 # Extract year and month from the 'date_occ' column
-crime_data_year_month = crime_data_date.withColumn('Year', year('Date Rptd')) \
-                                       .withColumn('Month', month('Date Rptd'))
-
-# Calculate counts for each year and month
-counts = crime_data_year_month.groupBy('Year', 'Month').agg(count('*').alias('crimetotal'))
+counts = crime_data_df \
+    .withColumn('Year', year('Date Rptd')) \
+    .withColumn('Month', month('Date Rptd')) \
+    .groupBy('Year', 'Month').agg(count('*').alias('crimetotal'))
 
 # Order by Year and Total Crimes Crimes
 partitioned = Window.partitionBy('Year').orderBy(counts['crimetotal'].desc())
@@ -76,4 +45,15 @@ top3_df = ranked_df.filter('rnk <= 3')
 top3 = top3_df.withColumnRenamed('rnk', '#')
 
 # Show the results
-top3.show(50)
+top3.show(100)
+
+## --- Finish Time ----
+finish_time = time.time()
+execution_time = finish_time - start_time
+print(f"Execution Time: {execution_time} seconds")
+
+# Export the results
+top3.toPandas().to_csv('/home/user/project/results/q1_df.csv', index=False)
+
+# Stop Spark Session
+sc.stop()

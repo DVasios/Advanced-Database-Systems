@@ -1,19 +1,28 @@
-# Load Secondary Data --- Median Income & Revgecoding
+# ---- Query 3 | Dataframe API ----
+
+# Pyspark Libraries
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import count, col, udf, dense_rank
+from pyspark.sql.window import Window
+import time
+
+# Spark Session | Queries
+sc = SparkSession \
+    .builder \
+    .appName("Query 3 - Dataframe API") \
+    .getOrCreate() 
+
+# Crime Data DF
+crime_data_df = sc.read.format('csv') \
+    .options(header='true', inferSchema=True) \
+    .load("hdfs://okeanos-master:54310/user/data/primary/crime_data")
 
 # --------------------------------------------------------------------------------------------------------- |
-
-# Median Income 2015 Schema
-median_income_schema = StructType([
-    StructField("Zip Code", StringType()),
-    StructField("Community", StringType()),
-    StructField("Estimated Median Income", StringType())
-])
 
 # Load data from dfs
 median_income_df = sc \
     .read.format('csv') \
-    .options(header='true') \
-    .schema(median_income_schema) \
+    .options(header='true', inferSchema=True) \
     .load("hdfs://okeanos-master:54310/user/data/secondary/median_household_incomes/LA_income_2015.csv")
 
 # Function to alter 'estimated median income' to integer | $XX,YYY -> XXYYY
@@ -28,18 +37,10 @@ median_income_df = median_income_df \
 
 # ---------------------------------------------------------------------------------------------------------- |
 
-# Revgecoding Schema
-revgecoding_schema = StructType([
-    StructField("LAT", StringType()),
-    StructField("LON", StringType()),
-    StructField("ZIPcode", StringType()),
-])
-
 # Load Data from DFS
 revgecoding_df =  sc \
     .read.format('csv') \
-    .options(header='true') \
-    .schema(revgecoding_schema) \
+    .options(header='true', inferSchema=True) \
     .load("hdfs://okeanos-master:54310/user/data/secondary/revgecoding.csv")
 
 # Change Column Types
@@ -81,34 +82,59 @@ descent_dict = {
 
 get_descent = udf(lambda x: descent_dict[x])
 
-# ----- Query 3 | Dataframe API
+
+# Load Secondary Data --- Median Income & Revgecoding
 query_3_filtered = joined_crime_data_df \
     .filter((col("descent").isNotNull()) & (col("descent") != '')) 
 
-# Ranked Desc
-window_spec_desc = Window.orderBy(col("median_income").desc())
-ranked_desc_df = query_3_filtered \
-    .withColumn("Rank", dense_rank().over(window_spec_desc)) 
-
-# Ranked Asc
-window_spec_asc = Window.orderBy(col("median_income").asc())
-ranked_asc_df = query_3_filtered \
-    .withColumn("Rank", dense_rank().over(window_spec_asc))
+## --- Start Time ----
+start_time = time.time()
 
 # Query
-def query_3 (ranked, num): 
-    return ranked \
-    .filter(col("Rank") == num) \
-    .groupBy("descent").agg(count('*').alias("#")) \
-    .withColumn("descent", get_descent(col("descent"))) \
-    .orderBy(col("#").desc())
+def query_3 (data_df, type, num):
+
+    if (type == 'asc'):
+        window_spec_asc = Window.orderBy(col("median_income").asc())
+        filtered_df = data_df \
+            .withColumn("Rank", dense_rank().over(window_spec_asc)) \
+            .filter(col("Rank") == num) \
+            .groupBy("descent").agg(count('*').alias("#")) \
+            .withColumn("descent", get_descent(col("descent"))) \
+            .orderBy(col("#").desc())
+        
+        filtered_df.show()
+
+        # Export Results
+        filtered_df.toPandas().to_csv(f'/home/user/project/results/q3_df_{type}_{num}.csv', index=False)
+        
+    elif (type == 'desc'):
+
+        window_spec_desc = Window.orderBy(col("median_income").desc())
+        filtered_df = data_df \
+            .withColumn("Rank", dense_rank().over(window_spec_desc)) \
+            .filter(col("Rank") == num) \
+            .groupBy("descent").agg(count('*').alias("#")) \
+            .withColumn("descent", get_descent(col("descent"))) \
+            .orderBy(col("#").desc())
+
+
+        filtered_df.show()
+
+        # Export Results
+        filtered_df.toPandas().to_csv(f'/home/user/project/results/q3_df_{type}_{num}.csv', index=False)
 
 # Print first 3 
 for i in range(1,4):
-    q = query_3(ranked_desc_df, i)
-    q.show()
+    query_3(query_3_filtered, 'asc', i)
 
 # Print last 3 
 for i in range(1,4):
-    q = query_3(ranked_asc_df, i)
-    q.show()
+    query_3(query_3_filtered, 'desc', i)
+
+## --- Finish Time ----
+finish_time = time.time()
+execution_time = round(finish_time - start_time, 2)
+print(f"Execution Time: {execution_time} seconds")
+
+# Stop Spark Session
+sc.stop()
