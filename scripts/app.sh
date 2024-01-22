@@ -40,7 +40,7 @@ if [[ $param1 == "-cd" ]]; then
   /home/user/project/src/data_proc/combine_data.py
 
   echo "Deleting Previous CSVs"
-  hdfs dfs -rm /user/data/primary/crime_data_2019.csv
+  hdfs dfs -rm /user/data/primary/crime_data_2010_2019.csv
   hdfs dfs -rm /user/data/primary/crime_data_2020_present.csv
 fi
 
@@ -84,4 +84,11 @@ if [[ $param1 == "-q3" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --num-executors $param2 \
     /home/user/project/src/query3/query3_df.py
+fi
+
+## Query 4 - Dataframe API | ./app.sh -q4
+if [[ $param1 == "-q4" ]]; then
+  $SPARK_HOME/bin/spark-submit \
+    --py-files hdfs://okeanos-master:54310/lib/dep.zip \
+    /home/user/project/src/query4/query4_df.py
 fi

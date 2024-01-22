@@ -23,7 +23,7 @@ crime_data_df = sc.read.format('csv') \
 median_income_df = sc \
     .read.format('csv') \
     .options(header='true', inferSchema=True) \
-    .load("hdfs://okeanos-master:54310/user/data/secondary/median_household_incomes/LA_income_2015.csv")
+    .load("hdfs://okeanos-master:54310/user/data/secondary/LA_income_2015.csv")
 
 # Function to alter 'estimated median income' to integer | $XX,YYY -> XXYYY
 alter_median_income_col = udf(lambda x: int(x.replace('$', '').replace(',', '')))
