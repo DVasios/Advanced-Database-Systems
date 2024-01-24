@@ -27,4 +27,10 @@ else
     start-yarn.sh
 fi
 
+echo "Creating Event Log Directory on Spark"
+hdfs dfs -mkdir /spark.eventLog
+
+echo "Starting Spark History Server"
+$SPARK_HOME/sbin/start-history-server.sh
+
 echo "DFS Cluster is ready!"

@@ -2,7 +2,7 @@
 
 # Pyspark Libraries
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import to_timestamp, col, udf, year, count, avg, row_number
+from pyspark.sql.functions import to_timestamp, col, udf, year, min, monotonically_increasing_id, collect_list
 import geopy.distance
 from pyspark.sql.window import Window
 
@@ -48,7 +48,7 @@ def get_distance(lat1, lon1, lat2, lon2):
 
 distance = udf(lambda lat1, lon1, lat2, lon2: get_distance(lat1, lon1, lat2, lon2))
 
-# Calculate Distance from police station that the crime happened
+# Calculate Distance from the police station that undertake crime 
 crime_distance_df =  joined_police_station_df \
     .filter(col('weapon').isNotNull()) \
     .withColumn("Distance", distance(col("crime_lat"), col("crime_lon"), col("police_station_lat"), col("police_station_lon"))) 
@@ -71,21 +71,20 @@ crime_distance_df =  joined_police_station_df \
 
 # Cross Join
 cross_join_police_station_df = crime_data_df \
-    .withColumn("AREA", col("AREA").cast('int')) \
     .withColumn("Year", year('Date Rptd')) \
-    .select(col('Year'), col("Weapon Used Cd").alias("weapon"), col("LAT").alias("crime_lat"), col("LON").alias("crime_lon"), col("AREA").alias("police_station")) \
+    .select(col('Year'), col("Weapon Used Cd").alias("weapon"), col("LAT").alias("crime_lat"), col("LON").alias("crime_lon")) \
+    .withColumn("ID", monotonically_increasing_id().alias('id')) \
     .crossJoin(police_stations_df) \
-    .withColumn("distance", distance(col("crime_lat"), col("crime_lon"), col("police_station_lat"), col("police_station_lon")))
+    .withColumn("distance", distance(col("crime_lat"), col("crime_lon"), col("police_station_lat"), col("police_station_lon"))) 
 
-window_spec = Window.partitionBy("distance").orderBy("distance")
 closest_police_station_df = cross_join_police_station_df \
-    .withColumn("row_number", row_number().over(window_spec)) \
-    .filter(col("row_number") == 1 ) 
+    .groupBy("id").agg(collect_list('Year'), collect_list('division'), min('distance'))
 
-per_year_df = closest_police_station_df \
-    .groupBy(col('Year')).agg(count('*').alias('#'), avg('distance').alias('average_distance')) \
-    .orderBy(col('Year').asc()) \
-    .select(col('Year'), col('average_distance'), col('#'))
+# per_year_df = closest_police_station_df \
+#     .groupBy(col('Year')).agg(count('*').alias('#'), avg('distance').alias('average_distance')) \
+#     .orderBy(col('Year').asc()) \
+#     .select(col('Year'), col('average_distance'), col('#'))
 
-per_year_df.limit(100).show()
+# per_year_df.limit(100).show()
 
+closest_police_station_df.limit(100).show()
