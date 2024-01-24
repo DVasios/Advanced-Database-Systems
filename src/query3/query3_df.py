@@ -5,6 +5,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import count, col, udf, dense_rank
 from pyspark.sql.window import Window
 import time
+import sys
 
 # Export Results Lib
 from importlib.machinery import SourceFileLoader
@@ -86,7 +87,6 @@ descent_dict = {
 
 get_descent = udf(lambda x: descent_dict[x])
 
-
 # Load Secondary Data --- Median Income & Revgecoding
 query_3_filtered = joined_crime_data_df \
     .filter((col("descent").isNotNull()) & (col("descent") != '')) 
@@ -127,6 +127,7 @@ def query_3 (data_df, type, num):
         # Export Results
         filtered_df.toPandas().to_csv(f'/home/user/project/results/q3_df_{type}_{num}.csv', index=False)
 
+
 # Print first 3 
 for i in range(1,4):
     query_3(query_3_filtered, 'asc', i)
@@ -141,7 +142,7 @@ execution_time = round(finish_time - start_time, 2)
 print(f"Execution Time: {execution_time} seconds")
 
 # Export Execution Time
-export_result.export('q3_df', execution_time)
+export_result.export(f'q3_{sys.argv[1]}.df', execution_time)
 
 # Stop Spark Session
 sc.stop()

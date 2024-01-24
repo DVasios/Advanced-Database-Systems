@@ -74,29 +74,29 @@ elif [[ $param1 == "-q2" && $param2 == "-rdd" ]]; then
 ## Query 3 - Dataframe API - {num} Executors | ./app.sh -q3 {num} 
 elif [[ $param1 == "-q3" ]]; then
 
-  # Two Executor
+  # Two Executors
   if [[ $param2 == "2" ]]; then
-  $spark_home/bin/spark-submit \
+  $SPARK_HOME/bin/spark-submit \
     --num-executors 2 \
     --executor-cores 2 \
     --executor-memory 2g \
-    $project_home/src/query3/query3_df.py
+    $PROJECT_HOME/src/query3/query3_df.py 2
   fi
 
-  # Three Executor
+  # Three Executors
   if [[ $param2 == "3" ]]; then
-  $spark_home/bin/spark-submit \
+  $SPARK_HOME/bin/spark-submit \
     --num-executors 3 \
     --executor-cores 2 \
-    $project_home/src/query3/query3_df.py
+    $PROJECT_HOME/src/query3/query3_df.py 3
   fi
 
-  # Three Executor
+  # Four Executors
   if [[ $param2 == "4" ]]; then
-  $spark_home/bin/spark-submit \
+  $SPARK_HOME/bin/spark-submit \
     --num-executors 1 \
     --executor-cores 1 \
-    $project_home/src/query3/query3_df.py
+    $PROJECT_HOME/src/query3/query3_df.py 4
   fi
 
 ## Query 4 - Dataframe API | ./app.sh -q4
@@ -107,5 +107,5 @@ elif [[ $param1 == "-q4" ]]; then
 
 ## Usage
 else 
-  echo "Usage:"
+  echo "Wrong Usage"
 fi
