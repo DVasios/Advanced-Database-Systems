@@ -32,62 +32,80 @@ if [[ $param1 == "-ld" ]]; then
   hdfs dfs -put $PROJECT_HOME/data /user/
   echo "Data is ready!"
 
-fi
-
 ## Combine Primary Data to Cluster | ./app.sh -cd
-if [[ $param1 == "-cd" ]]; then
+elif [[ $param1 == "-cd" ]]; then
+  echo "Running Spark Application"
   $SPARK_HOME/bin/spark-submit \
   /home/user/project/src/data_proc/combine_data.py
 
   echo "Deleting Previous CSVs"
   hdfs dfs -rm /user/data/primary/crime_data_2010_2019.csv
   hdfs dfs -rm /user/data/primary/crime_data_2020_present.csv
-fi
 
 ## Count & Types | ./app.sh -ct
-if [[ $param1 == "-ct" ]]; then
+elif [[ $param1 == "-ct" ]]; then
   $SPARK_HOME/bin/spark-submit \
-    /$PROJECT_HOME/src/data_proc/count_types.py
-fi
-
+    $PROJECT_HOME/src/data_proc/count_types.py
 
 ## Query 1 - Dataframe API - 4 Executors | ./app.sh -q1 -df
-if [[ $param1 == "-q1" && $param2 == "-df" ]]; then
+elif [[ $param1 == "-q1" && $param2 == "-df" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --num-executors 4 \
     $PROJECT_HOME/src/query1/query1_df.py
-fi
 
 ## Query 1 - SQL API - 4 Executros | ./app.sh -q1 -sql
-if [[ $param1 == "-q1" && $param2 == "-sql" ]]; then
+elif [[ $param1 == "-q1" && $param2 == "-sql" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --num-executors 4 \
     $PROJECT_HOME/src/query1/query1_sql.py
-fi
 
 ## Query 2 - Dataframe API - 4 Executors | ./app.sh -q2 -df
-if [[ $param1 == "-q2" && $param2 == "-df" ]]; then
+elif [[ $param1 == "-q2" && $param2 == "-df" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --num-executors 4 \
     $PROJECT_HOME/src/query2/query2_df.py
-fi
 
 ## Query 2 - RDD API - 4 Executors | ./app.sh -q2 -rdd
-if [[ $param1 == "-q2" && $param2 == "-rdd" ]]; then
+elif [[ $param1 == "-q2" && $param2 == "-rdd" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --num-executors 4 \
     $PROJECT_HOME/src/query2/query2_rdd.py
-fi
 
 ## Query 3 - Dataframe API - {num} Executors | ./app.sh -q3 {num} 
-if [[ $param1 == "-q3" ]]; then
-  $SPARK_HOME/bin/spark-submit \
-    --num-executors $param2 \
-    $PROJECT_HOME/src/query3/query3_df.py fi
+elif [[ $param1 == "-q3" ]]; then
+
+  # Two Executor
+  if [[ $param2 == "2" ]]; then
+  $spark_home/bin/spark-submit \
+    --num-executors 2 \
+    --executor-cores 2 \
+    --executor-memory 2g \
+    $project_home/src/query3/query3_df.py
+  fi
+
+  # Three Executor
+  if [[ $param2 == "3" ]]; then
+  $spark_home/bin/spark-submit \
+    --num-executors 3 \
+    --executor-cores 2 \
+    $project_home/src/query3/query3_df.py
+  fi
+
+  # Three Executor
+  if [[ $param2 == "4" ]]; then
+  $spark_home/bin/spark-submit \
+    --num-executors 1 \
+    --executor-cores 1 \
+    $project_home/src/query3/query3_df.py
+  fi
 
 ## Query 4 - Dataframe API | ./app.sh -q4
-if [[ $param1 == "-q4" ]]; then
+elif [[ $param1 == "-q4" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --py-files hdfs://okeanos-master:54310/lib/dep.zip \
     $PROJECT_HOME/src/query4/query4_df.py
+
+## Usage
+else 
+  echo "Usage:"
 fi

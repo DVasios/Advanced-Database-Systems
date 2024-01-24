@@ -5,6 +5,10 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import when, count, col
 import time
 
+# Export Results Lib
+from importlib.machinery import SourceFileLoader
+export_result = SourceFileLoader("export_result", '/home/user/project/lib/export_result.py').load_module()
+
 # Spark Session | Queries
 sc = SparkSession \
     .builder \
@@ -43,6 +47,9 @@ print(f"Execution Time: {execution_time} seconds")
 
 # Export the results
 query_2.toPandas().to_csv('/home/user/project/results/q2_df.csv', index=False)
+
+# Export Execution Time
+export_result.export('q2_df', execution_time)
 
 # Stop Spark Session
 sc.stop()

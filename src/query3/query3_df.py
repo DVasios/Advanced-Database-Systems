@@ -6,6 +6,10 @@ from pyspark.sql.functions import count, col, udf, dense_rank
 from pyspark.sql.window import Window
 import time
 
+# Export Results Lib
+from importlib.machinery import SourceFileLoader
+export_result = SourceFileLoader("export_result", '/home/user/project/lib/export_result.py').load_module()
+
 # Spark Session | Queries
 sc = SparkSession \
     .builder \
@@ -135,6 +139,9 @@ for i in range(1,4):
 finish_time = time.time()
 execution_time = round(finish_time - start_time, 2)
 print(f"Execution Time: {execution_time} seconds")
+
+# Export Execution Time
+export_result.export('q3_df', execution_time)
 
 # Stop Spark Session
 sc.stop()

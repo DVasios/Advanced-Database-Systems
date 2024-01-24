@@ -5,6 +5,10 @@ from pyspark.sql import SparkSession
 import pandas as pd
 import time
 
+# Export Results Lib
+from importlib.machinery import SourceFileLoader
+export_result = SourceFileLoader("export_result", '/home/user/project/lib/export_result.py').load_module()
+
 # Spark Session | Queries
 sc = SparkSession \
     .builder \
@@ -52,6 +56,9 @@ for i in result:
 df = pd.DataFrame(rows, columns=columns)
 sorted_df = df.sort_values(by='NumberOfCrimes', ascending=False, ignore_index=True)
 print(sorted_df)
+
+# Export Execution Time
+export_result.export('q2_rdd', execution_time)
 
 # Export result to csv
 sorted_df.to_csv('/home/user/project/results/q2_rdd.csv', index=False)

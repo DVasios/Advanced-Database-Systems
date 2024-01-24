@@ -5,6 +5,10 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import year, month, count, dense_rank, to_timestamp
 from pyspark.sql.window import Window
 
+# Export Results Lib
+from importlib.machinery import SourceFileLoader
+export_result = SourceFileLoader("export_result", '/home/user/project/lib/export_result.py').load_module()
+
 import time
 
 # Spark Session | Queries
@@ -54,6 +58,9 @@ print(f"Execution Time: {execution_time} seconds")
 
 # Export the results
 top3.toPandas().to_csv('/home/user/project/results/q1_df.csv', index=False)
+
+# Export Execution Time
+export_result.export('q1_df', execution_time)
 
 # Stop Spark Session
 sc.stop()

@@ -4,6 +4,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import to_timestamp
 
+# Export Results Lib
+from importlib.machinery import SourceFileLoader
+export_result = SourceFileLoader("export_result", '/home/user/project/lib/export_result.py').load_module()
+
 import time
 
 # Spark Session | Queries
@@ -61,6 +65,9 @@ print(f"Execution Time: {execution_time} seconds")
 
 # Export the results
 crime_data_query_1.toPandas().to_csv('/home/user/project/results/q1_sql.csv', index=False)
+
+# Export Execution Time
+export_result.export('q1_sql', execution_time)
 
 # Stop Spark  Session
 sc.stop()
