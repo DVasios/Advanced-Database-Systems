@@ -1,0 +1,7 @@
+Name,Value
+count,2993433
+date_rptd,timestamp
+date_occ,timestamp
+vict_age,int
+lat,double
+lon,double
