@@ -4,43 +4,93 @@
 param1=$1
 param2=$2
 
-## Load Data to Cluster | ./app.sh -ld
-if [[ $param1 == "-ld" ]]; then
+## Configuration
+if [[ $param1 == "-conf" ]]; then
 
-  #  Los Angeles Crime Data - Primary
-  if [[ -e $PROJECT_HOME/data/primary/crime_data_2010_2019.csv ]]; then
-      echo "Los Angeles Crime Data from 2010 to 2019 already exist"
-  else 
-      echo "Downloading Primary Data - Los Angeles Crime 2010-19... "
-      wget -nc -q -O  $PROJECT_HOME/data/primary/crime_data_2010_2019.csv https://data.lacity.org/api/views/63jg-8b9z/rows.csv?accessType=DOWNLOAD
-      echo "Download successful!"
+  ## Allow Connection
+  if [[ $param2 == "-wa" ]]; then
+    ufw allow 9870
+    ufw allow 8088
+    ufw allow 18080
   fi
 
-  if [[ -e $PROJECT_HOME/data/primary/crime_data_2020_present.csv ]]; then
-      echo "Los Angeles Crime Data from 2020 to present already exist"
-  else 
-      echo "Downloading Primary Data - Los Angeles Crime 2020-present... "
-      wget -nc -q -O  $PROJECT_HOME/data/primary/crime_data_2020_present.csv https://data.lacity.org/api/views/2nrs-mtv8/rows.csv?accessType=DOWNLOAD
-      echo "Download successful!"
+  ## Deny Connection
+  if [[ "$param2" == "-wd" ]]; then
+    ufw deny 9870
+    ufw deny 8088
+    ufw deny 18080
   fi
 
-  # Create Cluster Data Folder
-  echo "Creating User Directory in HDFS"
-  hdfs dfs -mkdir /user
+  ## Start Cluster
+  if [[ $param2 == "-cl" ]]; then
 
-  echo "Inserting Data to HDFS"
-  hdfs dfs -put $PROJECT_HOME/data /user/
-  echo "Data is ready!"
+    # Delete Data from Nodes
+    rm -rf /home/user/opt/data/h*
+    ssh user@okeanos-worker 'rm -rf /home/user/opt/data/*'
 
-## Combine Primary Data to Cluster | ./app.sh -cd
-elif [[ $param1 == "-cd" ]]; then
-  echo "Running Spark Application"
-  $SPARK_HOME/bin/spark-submit \
-  /home/user/project/src/data_proc/combine_data.py
+    # Start HDFS
+    echo "Starting DFS Cluster - two nodes in total"
+    hdfs namenode -format -y
+    start-dfs.sh
 
-  echo "Deleting Previous CSVs"
-  hdfs dfs -rm /user/data/primary/crime_data_2010_2019.csv
-  hdfs dfs -rm /user/data/primary/crime_data_2020_present.csv
+    # Start Yarn
+    echo "Startup YARN modules"
+    start-yarn.sh
+    echo "Cluster is ready"
+
+    # Start EventLog
+    echo "Creating Event Log Directory on Spark"
+    hdfs dfs -mkdir /spark.eventLog
+
+    # Add Event History Server
+    echo "Starting Spark History Server"
+    $SPARK_HOME/sbin/start-history-server.sh
+
+    echo "Namenode Daemons"
+    jps
+    echo "Datanode Daemons"
+    ssh user@okeanos-worker 'jps'
+    echo "If all daemons are running, then check cluster is read. If not, retry."
+
+  ## Load Data to Cluster | ./app.sh -ld
+  elif [[ $param2 == "-ld" ]]; then
+
+    #  Los Angeles Crime Data - Primary
+    if [[ -e $PROJECT_HOME/data/primary/crime_data_2010_2019.csv ]]; then
+        echo "Los Angeles Crime Data from 2010 to 2019 already exist"
+    else 
+        echo "Downloading Primary Data - Los Angeles Crime 2010-19... "
+        wget -nc -q -O  $PROJECT_HOME/data/primary/crime_data_2010_2019.csv https://data.lacity.org/api/views/63jg-8b9z/rows.csv?accessType=DOWNLOAD
+        echo "Download successful!"
+    fi
+
+    if [[ -e $PROJECT_HOME/data/primary/crime_data_2020_present.csv ]]; then
+        echo "Los Angeles Crime Data from 2020 to present already exist"
+    else 
+        echo "Downloading Primary Data - Los Angeles Crime 2020-present... "
+        wget -nc -q -O  $PROJECT_HOME/data/primary/crime_data_2020_present.csv https://data.lacity.org/api/views/2nrs-mtv8/rows.csv?accessType=DOWNLOAD
+        echo "Download successful!"
+    fi
+
+    # Create Cluster Data Folder
+    echo "Creating User Directory in HDFS"
+    hdfs dfs -mkdir /user
+
+    echo "Inserting Data to HDFS"
+    hdfs dfs -put $PROJECT_HOME/data /user/
+    echo "Data is ready!"
+
+    # Combine Primary Data to Cluster | ./app.sh -cd
+    echo "Running Spark Application"
+    $SPARK_HOME/bin/spark-submit \
+    /home/user/project/src/data_proc/combine_data.py
+
+    echo "Deleting Previous CSVs"
+    hdfs dfs -rm /user/data/primary/crime_data_2010_2019.csv
+    hdfs dfs -rm /user/data/primary/crime_data_2020_present.csv
+  else 
+    echo "Wrong Usage"
+  fi
 
 ## Count & Types | ./app.sh -ct
 elif [[ $param1 == "-ct" ]]; then

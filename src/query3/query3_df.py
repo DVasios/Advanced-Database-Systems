@@ -7,9 +7,14 @@ from pyspark.sql.window import Window
 import time
 import sys
 
+# Libs
+import time
+import os 
+project_home = os.getenv('PROJECT_HOME')
+
 # Export Results Lib
 from importlib.machinery import SourceFileLoader
-export_result = SourceFileLoader("export_result", '/home/user/project/lib/export_result.py').load_module()
+export_result = SourceFileLoader("export_result", f'{project_home}/lib/export_result.py').load_module()
 
 # Spark Session | Queries
 sc = SparkSession \
@@ -142,7 +147,7 @@ execution_time = round(finish_time - start_time, 2)
 print(f"Execution Time: {execution_time} seconds")
 
 # Export Execution Time
-export_result.export(f'q3_{sys.argv[1]}.df', execution_time)
+export_result.export(f'{project_home}/results/exec_times.csv',f'q3_{sys.argv[1]}.df', execution_time)
 
 # Stop Spark Session
 sc.stop()

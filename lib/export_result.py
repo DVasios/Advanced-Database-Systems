@@ -1,9 +1,7 @@
 import pandas as pd
 import os
 
-file_path = '../results/exec_times.csv'
-
-def export(name, time):
+def export(file_path, name, time):
     # Check if the file already exists
     if not os.path.exists(file_path):
 

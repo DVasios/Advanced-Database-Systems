@@ -1,9 +1,16 @@
 # Pyspark Libraries
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructField, StructType, StringType
 from pyspark.sql.functions import col, to_timestamp
 
-# Spark Session | Load Data
+# Libs
+import time
+import os 
+project_home = os.getenv('PROJECT_HOME')
+
+# Export Results Lib
+from importlib.machinery import SourceFileLoader
+export_result = SourceFileLoader("export_result", f'{project_home}/lib/export_result.py').load_module()
+
 sc = SparkSession \
     .builder \
     .appName("Count & Types") \
@@ -30,11 +37,17 @@ print(f"Crime Data Total Rows : {rows}")
 
 # Print Crime Data Types
 crime_data_types = crime_data_df.dtypes
-print(f"Date Rptd: {crime_data_types[1][1]}")
-print(f"DATE OCC: {crime_data_types[2][1]}")
-print(f"Vict Age: {crime_data_types[11][1]}")
-print(f"LAT: {crime_data_types[26][1]}")
-print(f"LON: {crime_data_types[27][1]}")
+
+# Export the results
+rows.toPandas().to_csv('/home/user/project/results/count_types.csv', index=False)
+
+# Export Execution Time
+export_result.export(f'{project_home}/results/','count_types', rows)
+export_result.export(f'{project_home}/results/count_types','date_rptd', crime_data_types[1][1])
+export_result.export(f'{project_home}/results/count_types','date_occ', crime_data_types[2][1])
+export_result.export(f'{project_home}/results/count_types','vict_age', crime_data_types[11][1])
+export_result.export(f'{project_home}/results/count_types','lat', crime_data_types[26][1])
+export_result.export(f'{project_home}/results/count_types','lon', crime_data_types[27][1])
 
 # Stop Spark Session 
 sc.stop()

@@ -1,6 +1,6 @@
 # ---- QUERY 1 | DATAFRAME API ----
 
-# Pyspark Libraries
+# Libraries
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import year, month, count, dense_rank, to_timestamp
 from pyspark.sql.window import Window
@@ -10,6 +10,7 @@ from importlib.machinery import SourceFileLoader
 export_result = SourceFileLoader("export_result", '/home/user/project/lib/export_result.py').load_module()
 
 import time
+import os
 
 # Spark Session | Queries
 sc = SparkSession \
@@ -60,7 +61,7 @@ print(f"Execution Time: {execution_time} seconds")
 top3.toPandas().to_csv('/home/user/project/results/q1_df.csv', index=False)
 
 # Export Execution Time
-export_result.export('q1_df', execution_time)
+export_result.export('/home/user/project/results/exec_times.csv', 'q1_df', execution_time)
 
 # Stop Spark Session
 sc.stop()
