@@ -17,7 +17,6 @@ sc = SparkSession \
     .getOrCreate() 
 
 # Crime Data DF
-print('Loading Crime Data Dataframe')
 crime_data_df = sc.read.format('csv') \
     .options(header='true', inferSchema=True) \
     .load("hdfs://okeanos-master:54310/user/data/primary/crime_data")

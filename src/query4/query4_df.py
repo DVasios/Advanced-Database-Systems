@@ -2,9 +2,14 @@
 
 # Pyspark Libraries
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import to_timestamp, col, udf, year, min, monotonically_increasing_id, collect_list
+from pyspark.sql.functions import to_timestamp, col, udf, year, min, monotonically_increasing_id, rank, broadcast
 import geopy.distance
 from pyspark.sql.window import Window
+
+# Libs
+import time
+import os 
+project_home = os.getenv('PROJECT_HOME')
 
 # Spark Session | Queries
 sc = SparkSession \
@@ -12,14 +17,30 @@ sc = SparkSession \
     .appName("Query 4 - Dataframe API") \
     .getOrCreate() 
 
-# Crime Data DF
-crime_data_df = sc \
+sc.conf.set("spark.sql.autoBroadcastJoinThreshold", 104857600)
+
+
+# # Crime Data DF
+# crime_data_df = sc \
+#     .read.format('csv') \
+#     .options(header='true', inferSchema=True) \
+#     .load("hdfs://okeanos-master:54310/user/data/primary/crime_data")
+
+# # crime data df
+# crime_data_df \
+#     .write.format('csv') \
+#     .options(header='true', inferschema=True) \
+#     .parquet("hdfs://okeanos-master:54310/user/data/primary/crime_data_par")
+
+# crime data df par
+crime_data_par_df = sc \
     .read.format('csv') \
-    .options(header='true', inferSchema=True) \
-    .load("hdfs://okeanos-master:54310/user/data/primary/crime_data")
+    .options(header='true', inferschema=True) \
+    .parquet("hdfs://okeanos-master:54310/user/data/primary/crime_data_par")
+
 
 # Change Columns types
-crime_data_df = crime_data_df \
+crime_data_par_df = crime_data_par_df \
     .withColumn('Date Rptd', to_timestamp('Date Rptd', 'MM/dd/yyyy hh:mm:ss a')) \
     .withColumn('LAT',col('LAT').cast('double')) \
     .withColumn('LON', col('LON').cast('double'))
@@ -37,21 +58,24 @@ police_stations_df = police_stations_df \
     .select(col("X").alias("police_station_lon"), col("Y").alias("police_station_lat"), col("PREC").alias("police_station"), col("DIVISION").alias("division")) 
 
 # Join Data
-joined_police_station_df = crime_data_df \
-    .withColumn("AREA", col("AREA").cast('int')) \
-    .withColumn("Year", year('Date Rptd')) \
-    .select(col('Year'), col("Weapon Used Cd").alias("weapon"), col("LAT").alias("crime_lat"), col("LON").alias("crime_lon"), col("AREA").alias("police_station")) \
-    .join(police_stations_df, on="police_station")
+# joined_police_station_df = crime_data_par_df \
+#     .withColumn("AREA", col("AREA").cast('int')) \
+#     .withColumn("Year", year('Date Rptd')) \
+#     .select(col('Year'), col("Weapon Used Cd").alias("weapon"), col("LAT").alias("crime_lat"), col("LON").alias("crime_lon"), col("AREA").alias("police_station")) \
+#     .join(police_stations_df, on="police_station")
 
 def get_distance(lat1, lon1, lat2, lon2):
     return geopy.distance.geodesic((lat1, lon1), (lat2, lon2)).km
 
 distance = udf(lambda lat1, lon1, lat2, lon2: get_distance(lat1, lon1, lat2, lon2))
 
+## --- Start Time ----
+start_time = time.time()
+
 # Calculate Distance from the police station that undertake crime 
-crime_distance_df =  joined_police_station_df \
-    .filter(col('weapon').isNotNull()) \
-    .withColumn("Distance", distance(col("crime_lat"), col("crime_lon"), col("police_station_lat"), col("police_station_lon"))) 
+# crime_distance_df =  joined_police_station_df \
+#     .filter(col('weapon').isNotNull()) \
+#     .withColumn("Distance", distance(col("crime_lat"), col("crime_lon"), col("police_station_lat"), col("police_station_lon"))) 
 
 # Per Year
 # per_year_df = crime_distance_df \
@@ -70,15 +94,16 @@ crime_distance_df =  joined_police_station_df \
 # per_division_df.limit(100).show()
 
 # Cross Join
-cross_join_police_station_df = crime_data_df \
+cross_join_police_station_df = crime_data_par_df \
     .withColumn("Year", year('Date Rptd')) \
-    .select(col('Year'), col("Weapon Used Cd").alias("weapon"), col("LAT").alias("crime_lat"), col("LON").alias("crime_lon")) \
-    .withColumn("ID", monotonically_increasing_id().alias('id')) \
-    .crossJoin(police_stations_df) \
+    .select(col("DR_NO").alias("ID"),col('Year'), col("Weapon Used Cd").alias("weapon"), col("LAT").alias("crime_lat"), col("LON").alias("crime_lon")) \
+    .crossJoin(broadcast(police_stations_df)) \
     .withColumn("distance", distance(col("crime_lat"), col("crime_lon"), col("police_station_lat"), col("police_station_lon"))) 
 
+windowSpec = Window.partitionBy("ID").orderBy("distance")
 closest_police_station_df = cross_join_police_station_df \
-    .groupBy("id").agg(collect_list('Year'), collect_list('division'), min('distance'))
+    .withColumn("rank", rank().over(windowSpec)) \
+    .filter(col("rank") == 1)
 
 # per_year_df = closest_police_station_df \
 #     .groupBy(col('Year')).agg(count('*').alias('#'), avg('distance').alias('average_distance')) \
@@ -88,3 +113,10 @@ closest_police_station_df = cross_join_police_station_df \
 # per_year_df.limit(100).show()
 
 closest_police_station_df.limit(100).show()
+# cross_join_police_station_df.limit(100).show()
+
+## --- Finish Time ----
+finish_time = time.time()
+execution_time = round(finish_time - start_time, 2)
+print(f"Execution Time: {execution_time} seconds")
+

@@ -147,7 +147,7 @@ execution_time = round(finish_time - start_time, 2)
 print(f"Execution Time: {execution_time} seconds")
 
 # Export Execution Time
-export_result.export(f'{project_home}/results/exec_times.csv',f'q3_{sys.argv[1]}.df', execution_time)
+export_result.export(f'{project_home}/results/exec_times.csv',f'q3_{sys.argv[1]}_df', execution_time)
 
 # Stop Spark Session
 sc.stop()

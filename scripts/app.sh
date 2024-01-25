@@ -88,6 +88,10 @@ if [[ $param1 == "-conf" ]]; then
     echo "Deleting Previous CSVs"
     hdfs dfs -rm /user/data/primary/crime_data_2010_2019.csv
     hdfs dfs -rm /user/data/primary/crime_data_2020_present.csv
+
+    # Load Dependencies
+    hdfs dfs -mkdir /lib
+    hdfs dfs -put $PROJECT_HOME/lib/dep.zip /lib/
   else 
     echo "Wrong Usage"
   fi
@@ -152,6 +156,8 @@ elif [[ $param1 == "-q3" ]]; then
 ## Query 4 - Dataframe API | ./app.sh -q4
 elif [[ $param1 == "-q4" ]]; then
   $SPARK_HOME/bin/spark-submit \
+    --conf spark.sql.shuffle.partitions=100 \
+    --conf spark.sql.autoBroadcastJoinThreshold=104857600 \
     --py-files hdfs://okeanos-master:54310/lib/dep.zip \
     $PROJECT_HOME/src/query4/query4_df.py
 
