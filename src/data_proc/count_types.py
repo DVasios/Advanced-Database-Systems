@@ -31,23 +31,19 @@ crime_data_df = crime_data_df \
     .withColumn('LAT',col('LAT').cast('double')) \
     .withColumn('LON', col('LON').cast('double'))
 
-# Print Total Crime Data Rows
+# Total Crime Data Rows
 rows = crime_data_df.count()
-print(f"Crime Data Total Rows : {rows}")
 
-# Print Crime Data Types
+# Crime Data Types
 crime_data_types = crime_data_df.dtypes
 
-# Export the results
-rows.toPandas().to_csv('/home/user/project/results/count_types.csv', index=False)
-
-# Export Execution Time
-export_result.export(f'{project_home}/results/','count_types', rows)
-export_result.export(f'{project_home}/results/count_types','date_rptd', crime_data_types[1][1])
-export_result.export(f'{project_home}/results/count_types','date_occ', crime_data_types[2][1])
-export_result.export(f'{project_home}/results/count_types','vict_age', crime_data_types[11][1])
-export_result.export(f'{project_home}/results/count_types','lat', crime_data_types[26][1])
-export_result.export(f'{project_home}/results/count_types','lon', crime_data_types[27][1])
+# Export Results
+export_result.export(f'{project_home}/results/count_types.csv','count', rows)
+export_result.export(f'{project_home}/results/count_types.csv','date_rptd', crime_data_types[1][1])
+export_result.export(f'{project_home}/results/count_types.csv','date_occ', crime_data_types[2][1])
+export_result.export(f'{project_home}/results/count_types.csv','vict_age', crime_data_types[11][1])
+export_result.export(f'{project_home}/results/count_types.csv','lat', crime_data_types[26][1])
+export_result.export(f'{project_home}/results/count_types.csv','lon', crime_data_types[27][1])
 
 # Stop Spark Session 
 sc.stop()
