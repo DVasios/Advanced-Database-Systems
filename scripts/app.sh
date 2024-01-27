@@ -147,7 +147,7 @@ elif [[ $param1 == "-q3" ]]; then
   # Four Executors
   elif [[ $param2 == "4" ]]; then
   $SPARK_HOME/bin/spark-submit \
-    --num-executors 1 \
+    --num-executors 4 \
     --executor-cores 1 \
     $PROJECT_HOME/src/query3/query3_df.py $param2 $param3
   
