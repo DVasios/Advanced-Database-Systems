@@ -3,6 +3,16 @@ q1_df,16.00336766242981
 q1_sql,18.24
 q2_df,5.77
 q2_rdd,31.41
-q3_2_df,118.28
+q3_2_df,43.44
 q3_3_df,228.06
 q3_4_df,189.91
+q4_a_df,40.1
+q4_b_df,326.17
+q3_2_broadcast_df,47.32
+q3_2_merge_df,40.71
+q3_2_shuffle_hash_df,46.29
+q3_2_shuffle_replicate_nl_df,45.14
+q4_a_broadcast_df,38.12
+q4_a_merge_df,21.48
+q4_a_shuffle_hash_df,22.43
+q4_a_shuffle_replicate_nl_df,28.66

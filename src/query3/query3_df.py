@@ -63,9 +63,17 @@ revgecoding_df = revgecoding_df \
 # Join Secondary Dataframes to the main
 income_from_coordinates_df = median_income_df.join(revgecoding_df, on="zipcode")
 
-joined_crime_data_df = crime_data_df \
-    .join(income_from_coordinates_df, (crime_data_df["LAT"] == income_from_coordinates_df["LAT"]) & (crime_data_df["LON"] == income_from_coordinates_df["LON"])) \
-    .select(col('Vict Descent').alias('descent'), col('median_income'))
+# Method
+if (len(sys.argv) >= 3):
+
+    joined_crime_data_df = crime_data_df \
+        .join(income_from_coordinates_df.hint(sys.argv[2]), (crime_data_df["LAT"] == income_from_coordinates_df["LAT"]) & (crime_data_df["LON"] == income_from_coordinates_df["LON"])) \
+        .select(col('Vict Descent').alias('descent'), col('median_income'))
+
+else:
+    joined_crime_data_df = crime_data_df \
+        .join(income_from_coordinates_df, (crime_data_df["LAT"] == income_from_coordinates_df["LAT"]) & (crime_data_df["LON"] == income_from_coordinates_df["LON"])) \
+        .select(col('Vict Descent').alias('descent'), col('median_income'))
 
 # Dictionary for Descent
 descent_dict = {
@@ -96,6 +104,9 @@ get_descent = udf(lambda x: descent_dict[x])
 query_3_filtered = joined_crime_data_df \
     .filter((col("descent").isNotNull()) & (col("descent") != '')) 
 
+# Persist Df for better performance
+query_3_filtered.persist()
+
 ## --- Start Time ----
 start_time = time.time()
 
@@ -114,7 +125,7 @@ def query_3 (data_df, type, num):
         filtered_df.show()
 
         # Export Results
-        filtered_df.toPandas().to_csv(f'/home/user/project/results/q3_df_{type}_{num}.csv', index=False)
+        filtered_df.toPandas().to_csv(f'{project_home}/results/q3_df_{type}_{num}.csv', index=False)
         
     elif (type == 'desc'):
 
@@ -130,7 +141,7 @@ def query_3 (data_df, type, num):
         filtered_df.show()
 
         # Export Results
-        filtered_df.toPandas().to_csv(f'/home/user/project/results/q3_df_{type}_{num}.csv', index=False)
+        filtered_df.toPandas().to_csv(f'{project_home}/results/q3_df_{type}_{num}.csv', index=False)
 
 
 # Print first 3 
@@ -147,7 +158,12 @@ execution_time = round(finish_time - start_time, 2)
 print(f"Execution Time: {execution_time} seconds")
 
 # Export Execution Time
-export_result.export(f'{project_home}/results/exec_times.csv',f'q3_{sys.argv[1]}_df', execution_time)
+if (len(sys.argv) >= 3):
+    export_result.export(f'{project_home}/results/exec_times.csv',f'q3_{sys.argv[1]}_{sys.argv[2]}_df', execution_time)
+else: 
+    export_result.export(f'{project_home}/results/exec_times.csv',f'q3_{sys.argv[1]}_df', execution_time)
+
+query_3_filtered.unpersist()
 
 # Stop Spark Session
 sc.stop()

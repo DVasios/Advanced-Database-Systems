@@ -12,7 +12,7 @@ import time
 
 # Export Results Lib
 from importlib.machinery import SourceFileLoader
-export_result = SourceFileLoader("export_result", f'{project_home}/project/lib/export_result.py').load_module()
+export_result = SourceFileLoader("export_result", f'{project_home}/lib/export_result.py').load_module()
 
 # Spark Session | Queries
 sc = SparkSession \
@@ -51,7 +51,7 @@ execution_time = round(finish_time - start_time, 2)
 print(f"Execution Time: {execution_time} seconds")
 
 # Export the results
-query_2.toPandas().to_csv(f'{project_home}/project/results/q2_df.csv', index=False)
+query_2.toPandas().to_csv(f'{project_home}/results/q2_df.csv', index=False)
 
 # Export Execution Time
 export_result.export(f'{project_home}/results/exec_times.csv','q2_df', execution_time)

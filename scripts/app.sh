@@ -3,6 +3,7 @@
 # Application 
 param1=$1
 param2=$2
+param3=$3
 
 ## Configuration
 if [[ $param1 == "-conf" ]]; then
@@ -50,7 +51,7 @@ if [[ $param1 == "-conf" ]]; then
     jps
     echo "Datanode Daemons"
     ssh user@okeanos-worker 'jps'
-    echo "If all daemons are running, then check cluster is read. If not, retry."
+    echo "If all daemons are running, then check if cluster is ready. If not, retry."
 
   ## Load Data to Cluster | ./app.sh -ld
   elif [[ $param2 == "-ld" ]]; then
@@ -83,7 +84,7 @@ if [[ $param1 == "-conf" ]]; then
     # Combine Primary Data to Cluster | ./app.sh -cd
     echo "Running Spark Application"
     $SPARK_HOME/bin/spark-submit \
-    /home/user/project/src/data_proc/combine_data.py
+      $PROJECT_HOME/src/data_proc/combine_data.py
 
     echo "Deleting Previous CSVs"
     hdfs dfs -rm /user/data/primary/crime_data_2010_2019.csv
@@ -134,32 +135,44 @@ elif [[ $param1 == "-q3" ]]; then
     --num-executors 2 \
     --executor-cores 2 \
     --executor-memory 2g \
-    $PROJECT_HOME/src/query3/query3_df.py 2
-  fi
+    $PROJECT_HOME/src/query3/query3_df.py $param2 $param3
 
   # Three Executors
-  if [[ $param2 == "3" ]]; then
+  elif [[ $param2 == "3" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --num-executors 3 \
     --executor-cores 2 \
-    $PROJECT_HOME/src/query3/query3_df.py 3
-  fi
+    $PROJECT_HOME/src/query3/query3_df.py $param2 $param3
 
   # Four Executors
-  if [[ $param2 == "4" ]]; then
+  elif [[ $param2 == "4" ]]; then
   $SPARK_HOME/bin/spark-submit \
     --num-executors 1 \
     --executor-cores 1 \
-    $PROJECT_HOME/src/query3/query3_df.py 4
+    $PROJECT_HOME/src/query3/query3_df.py $param2 $param3
+  
+  else 
+    echo "Wrong Usage"
   fi
 
 ## Query 4 - Dataframe API | ./app.sh -q4
 elif [[ $param1 == "-q4" ]]; then
-  $SPARK_HOME/bin/spark-submit \
-    --conf spark.sql.shuffle.partitions=100 \
-    --conf spark.sql.autoBroadcastJoinThreshold=104857600 \
-    --py-files hdfs://okeanos-master:54310/lib/dep.zip \
-    $PROJECT_HOME/src/query4/query4_df.py
+
+  if [[ $param2 == "-a" ]]; then
+
+    $SPARK_HOME/bin/spark-submit \
+      --py-files hdfs://okeanos-master:54310/lib/dep.zip \
+      $PROJECT_HOME/src/query4/query4_a_df.py $param3
+
+  elif [[ $param2 == "-b" ]]; then
+
+    $SPARK_HOME/bin/spark-submit \
+      --py-files hdfs://okeanos-master:54310/lib/dep.zip \
+      $PROJECT_HOME/src/query4/query4_b_df.py $param3
+
+  else 
+    echo "Wrong Usage"
+  fi
 
 ## Usage
 else 
